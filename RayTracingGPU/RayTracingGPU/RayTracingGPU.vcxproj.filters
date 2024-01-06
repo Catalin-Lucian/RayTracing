@@ -9,16 +9,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="vec3.h">
+    <ClInclude Include="image_cuda.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="utils.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="image.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="interval.h">
+    <ClInclude Include="interval_cuda.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="vec3_cuda.h">
@@ -39,7 +33,7 @@
     <ClInclude Include="camera_cuda.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="material.h">
+    <ClInclude Include="material_cuda.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

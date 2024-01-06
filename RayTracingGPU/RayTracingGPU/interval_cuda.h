@@ -1,8 +1,7 @@
 #ifndef INTERVAL_H
 #define INTERVAL_H
 
-#include "utils.h"
-
+const double infinity = std::numeric_limits<double>::infinity();
 class Interval {
 public:
     double min, max;

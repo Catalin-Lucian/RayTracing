@@ -1,14 +1,14 @@
 #ifndef COLOR_H
 #define COLOR_H
 
-#include "vec3.h"
+#include "vec3_cuda.h"
 
 #include <fstream>
 #include <iostream>
 #include <vector>
-#include "interval.h"
+#include "interval_cuda.h"
 
-using Color = Vec3;
+using Color = vec3;
 using namespace std;
 
 
@@ -59,7 +59,7 @@ public:
 
         for (int y = height - 1; y >= 0; y--) {
             for (int x = 0; x < width; x++) {
-                Vec3 pixel = image[y][x] * 255.99;
+                vec3 pixel = image[y][x] * 255.99;
                 unsigned char r = static_cast<unsigned char>(pixel[0]);
                 unsigned char g = static_cast<unsigned char>(pixel[1]);
                 unsigned char b = static_cast<unsigned char>(pixel[2]);

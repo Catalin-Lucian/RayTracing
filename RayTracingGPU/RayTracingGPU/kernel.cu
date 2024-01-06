@@ -2,11 +2,11 @@
 #include <time.h>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
-#include "image.h"
+#include "image_cuda.h"
 #include "vec3_cuda.h"
 #include "ray_cuda.h"
 #include "hitable_cuda.h"
-#include "material.h"
+#include "material_cuda.h"
 #include "sphere_cuda.h"
 #include "hitable_list_cuda.h"
 #include <curand_kernel.h>
@@ -145,9 +145,9 @@ __global__ void free_world(hitable** d_list, hitable** d_world, camera** d_camer
 }
 
 int main() {
-    int nx = 1200;
-    int ny = 600;
-    int ns = 100;
+    int nx = 800;
+    int ny = 500;
+    int ns = 30;
     int tx = 8;
     int ty = 8;
 
