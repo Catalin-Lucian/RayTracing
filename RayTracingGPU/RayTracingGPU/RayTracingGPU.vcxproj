@@ -82,7 +82,17 @@
     <CudaCompile Include="kernel.cu" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="camera_cuda.h" />
+    <ClInclude Include="hitable_cuda.h" />
+    <ClInclude Include="hitable_list_cuda.h" />
     <ClInclude Include="image.h" />
+    <ClInclude Include="interval.h" />
+    <ClInclude Include="material.h" />
+    <ClInclude Include="ray_cuda.h" />
+    <ClInclude Include="sphere_cuda.h" />
+    <ClInclude Include="utils.h" />
+    <ClInclude Include="vec3.h" />
+    <ClInclude Include="vec3_cuda.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
