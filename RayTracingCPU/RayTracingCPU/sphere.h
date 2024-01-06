@@ -1,10 +1,9 @@
 #ifndef SPHERE_H
 #define SPHERE_H
 
+#include "ray_tracing.h"
+
 #include "hittable.h"
-#include "material.h"
-#include "vec3.h"
-#include "interval.h"
 
 class Sphere : public Hittable {
 public:
@@ -33,6 +32,7 @@ public:
         rec.p = r.at(rec.t);
         Vec3 outward_normal = (rec.p - center) / radius;
         rec.set_face_normal(r, outward_normal);
+        rec.mat = mat;
 
         return true;
     }

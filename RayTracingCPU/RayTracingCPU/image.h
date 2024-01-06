@@ -1,9 +1,10 @@
 #ifndef COLOR_H
 #define COLOR_H
 
+#include "vec3.h"
+
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
-
 #include <iostream>
 
 using Color = Vec3;

@@ -1,9 +1,9 @@
 #ifndef HITTABLE_LIST_H
 #define HITTABLE_LIST_H
 
+#include "ray_tracing.h"
+
 #include "hittable.h"
-#include "interval.h"
-#include "ray.h"
 
 #include <memory>
 #include <vector>

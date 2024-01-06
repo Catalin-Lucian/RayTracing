@@ -1,11 +1,11 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include "hittable.h"
+#include "ray_tracing.h"
+
 #include "image.h"
-#include "ray.h"
-#include "vec3.h"
-#include "interval.h"
+#include "hittable.h"
+#include "material.h"
 
 #include <iostream>
 
@@ -79,6 +79,7 @@ private:
         if (world.hit(r, Interval(0.001, infinity), rec)) {
             Ray scattered;
             Color attenuation;
+            // !!!!!!!! problem with the material
             if (rec.mat->scatter(r, rec, attenuation, scattered))
                 return attenuation * ray_color(scattered, depth - 1, world);
             return Color(0, 0, 0);
