@@ -29,7 +29,8 @@ void check_cuda(cudaError_t result, char const* const func, const char* const fi
 __device__ vec3 color(const ray& r, hitable** world, curandState* local_rand_state) {
     ray cur_ray = r;
     vec3 cur_attenuation = vec3(1.0, 1.0, 1.0);
-    for (int i = 0; i < 50; i++) {
+    int depth = 50; // adancimea
+    for (int i = 0; i < depth; i++) {
         hit_record rec;
         if ((*world)->hit(cur_ray, 0.001f, FLT_MAX, rec)) {
             ray scattered;
@@ -49,7 +50,6 @@ __device__ vec3 color(const ray& r, hitable** world, curandState* local_rand_sta
             return cur_attenuation * c;
         }
     }
-    return vec3(0.0, 0.0, 0.0); // exceeded recursion
 }
 
 __global__ void rand_init(curandState* rand_state) {
@@ -67,7 +67,8 @@ __global__ void render_init(int max_x, int max_y, curandState* rand_state) {
     curand_init(2024 + pixel_index, 0, 0, &rand_state[pixel_index]);
 }
 
-__global__ void render(vec3* fb, int max_x, int max_y, int ns, camera** cam, hitable** world, curandState* rand_state) {
+__global__ void render(vec3* fb, int max_x, int max_y, int ns, 
+    camera** cam, hitable** world, curandState* rand_state) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
     if ((i >= max_x) || (j >= max_y)) return;
@@ -145,9 +146,9 @@ __global__ void free_world(hitable** d_list, hitable** d_world, camera** d_camer
 }
 
 int main() {
-    int nx = 800;
-    int ny = 500;
-    int ns = 30;
+    int nx = 500; // width
+    int ny = 300; // heigth
+    int ns = 500; // numar de sample uri
     int tx = 8;
     int ty = 8;
 
@@ -158,11 +159,11 @@ int main() {
 
     int num_pixels = nx * ny;
     size_t fb_size = num_pixels * sizeof(vec3);
-
-    // allocate FB
-    vec3 *fb;
-    checkCudaErrors(cudaMallocManaged((void**)&fb, fb_size));
-
+    
+    vec3* fb_host = new vec3[num_pixels];
+    vec3* fb_device;
+    checkCudaErrors(cudaMalloc((void**)&fb_device, fb_size));
+    
     // allocate random state
     curandState* d_rand_state;
     checkCudaErrors(cudaMalloc((void**)&d_rand_state, num_pixels * sizeof(curandState)));
@@ -178,36 +179,57 @@ int main() {
     hitable** d_list;
     int num_hitables = 22 * 22 + 1 + 3;
     checkCudaErrors(cudaMalloc((void**)&d_list, num_hitables * sizeof(hitable*)));
+    
+    //world
     hitable** d_world;
     checkCudaErrors(cudaMalloc((void**)&d_world, sizeof(hitable*)));
+    
+    // camera
     camera** d_camera;
     checkCudaErrors(cudaMalloc((void**)&d_camera, sizeof(camera*)));
+
+    // create world
     create_world << <1, 1 >> > (d_list, d_world, d_camera, nx, ny, d_rand_state2);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
+    //// clock to measure time
     clock_t start, stop;
     start = clock();
-    // Render our buffer
+
+    // calculate blocks and threads
     dim3 blocks(nx / tx + 1, ny / ty + 1);
     dim3 threads(tx, ty);
+
+    // render init
     render_init << <blocks, threads >> > (nx, ny, d_rand_state);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
-    render << <blocks, threads >> > (fb, nx, ny, ns, d_camera, d_world, d_rand_state);
+
+    // render the scene
+    render << <blocks, threads >> > (fb_device, nx, ny, ns, d_camera, d_world, d_rand_state);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
+
+    //// clock to measure memory copy time
+    //clock_t start, stop;
+    //start = clock();
+
+    // copiere pe host
+    checkCudaErrors(cudaMemcpy(fb_host, fb_device, fb_size, cudaMemcpyDeviceToHost));
+
     stop = clock();
     double timer_seconds = ((double)(stop - start)) / CLOCKS_PER_SEC;
     std::cerr << "took " << timer_seconds << " seconds.\n";
 
 
+
     for (int j = ny-1; j >= 0; j--) {
         for (int i = 0; i < nx; i++) {
             size_t pixel_index = j * nx + i;
-            float r = fb[pixel_index].r();
-            float g = fb[pixel_index].g();
-            float b = fb[pixel_index].b();
+            float r = fb_host[pixel_index].r();
+            float g = fb_host[pixel_index].g();
+            float b = fb_host[pixel_index].b();
             image.setPixel(ny - 1 - j, i, Color(r, g, b), 1);
         }
     }
@@ -222,9 +244,8 @@ int main() {
     checkCudaErrors(cudaFree(d_world));
     checkCudaErrors(cudaFree(d_list));
     checkCudaErrors(cudaFree(d_rand_state));
-    checkCudaErrors(cudaFree(fb));
+    checkCudaErrors(cudaFree(fb_device));
     
-
-    // useful for cuda - memcheck --leak - check full
+    delete[] fb_host;
     cudaDeviceReset();
 }
