@@ -1,9 +1,12 @@
 #ifndef MATERIALH
 #define MATERIALH
 
-#include "ray_cuda.h"
-#include "hitable_cuda.h"
 #include <curand_kernel.h>
+#include "hitable_cuda.h"
+
+struct ray;
+using namespace hittable;
+
 
 struct material {
     enum type {
@@ -21,7 +24,7 @@ struct material {
 };
 
 __device__ inline 
-material make_lambertian(const vec3& albedo) {
+material make_lambertian(vec3 albedo) {
 	material m;
 	m.type = material::LAMBERTIAN;
 	m.albedo = albedo;
@@ -29,7 +32,7 @@ material make_lambertian(const vec3& albedo) {
 }
 
 __device__ inline 
-material make_metal(const vec3& albedo, float fuzz) {
+material make_metal(vec3 albedo, float fuzz) {
 	material m;
 	m.type = material::METAL;
 	m.albedo = albedo;
@@ -88,7 +91,7 @@ __device__
 bool scatter_lambertian(
     const material& mat, 
     const ray& r_in, 
-    const hittable::record& rec, 
+    const record& rec, 
     vec3& attenuation, 
     ray& scattered, 
     curandState* local_rand_state
@@ -103,7 +106,7 @@ __device__
 bool scatter_metal(
 	const material& mat, 
 	const ray& r_in, 
-	const hittable::record& rec, 
+	const record& rec, 
 	vec3& attenuation, 
 	ray& scattered, 
 	curandState* local_rand_state
@@ -118,7 +121,7 @@ __device__
 bool scatter_dielectric(
     const material& mat,
     const ray& r_in,
-    const hittable::record& rec,
+    const record& rec,
     vec3& attenuation,
     ray& scattered,
     curandState* local_rand_state
@@ -159,7 +162,7 @@ __device__ inline
 bool scatter(
     const material& mat,
     const ray& r_in,
-    const hittable::record& rec,
+    const record& rec,
     vec3& attenuation,
     ray& scattered,
     curandState* local_rand_state

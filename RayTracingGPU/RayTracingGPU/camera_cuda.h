@@ -19,9 +19,8 @@ struct camera {
 
 
 __device__ 
-camera* make_camera(vec3 lookfrom, vec3 lookat, vec3 vup, float vfov, float aspect, float aperture, float focus_dist) { 
+void init_camera(camera* cam, vec3 lookfrom, vec3 lookat, vec3 vup, float vfov, float aspect, float aperture, float focus_dist) { 
     // vfov is top to bottom in degrees
-	camera* cam = new camera;
 	cam->lens_radius = aperture / 2.0f;
 	float theta = vfov * ((float)M_PI) / 180.0f;
 	float half_height = tan(theta / 2.0f);
@@ -33,7 +32,6 @@ camera* make_camera(vec3 lookfrom, vec3 lookat, vec3 vup, float vfov, float aspe
 	cam->lower_left_corner = cam->origin - half_width * focus_dist * cam->u - half_height * focus_dist * cam->v - focus_dist * cam->w;
 	cam->horizontal = 2.0f * half_width * focus_dist * cam->u;
 	cam->vertical = 2.0f * half_height * focus_dist * cam->v;
-	return cam;
 }
 
 __device__ vec3 random_in_unit_disk(curandState* local_rand_state) {

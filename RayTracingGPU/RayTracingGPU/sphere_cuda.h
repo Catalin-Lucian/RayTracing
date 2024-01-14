@@ -2,17 +2,18 @@
 #define SPHEREH
 
 #include "hitable_cuda.h"
+#include "material_cuda.h"
 
 namespace hittable {
     struct sphere
     {
         vec3 center;
         float radius;
-        material* material;
+        material material;
     };
 
     __device__ inline
-    sphere make_sphere(vec3 center, float radius, material* mat){
+    sphere make_sphere(vec3 center, float radius,material mat){
 		sphere s;
 		s.center = center;
 		s.radius = radius;

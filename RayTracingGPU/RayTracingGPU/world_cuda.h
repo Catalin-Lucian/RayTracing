@@ -1,7 +1,7 @@
 #ifndef HITABLELISTH
 #define HITABLELISTH
 
-#include "hitable_cuda.h"
+#include "sphere_cuda.h"
 
 namespace hittable {
     struct world
@@ -11,11 +11,9 @@ namespace hittable {
     };
 
     __device__ inline
-    world* make_world(sphere* objects, int size) {
-		world* w = new world;
-		w->objects = objects;
-		w->size = size;
-		return w;
+    world init_world(world* world, sphere* objects, int size) {
+		world->objects = objects;
+		world->size = size;
 	}
 
 	__device__
