@@ -77,12 +77,18 @@ __global__ void render(
     camera* cam,
     world* worldd,
     int startRow, int endRow,
+    int startCol, int endCol,
     curandState* rand_state
 ) {
-    int i = threadIdx.x + blockIdx.x * blockDim.x;
-    int j = threadIdx.y + blockIdx.y * blockDim.y;
+    // Global thread indices
+    int i_global = threadIdx.x + blockIdx.x * blockDim.x;
+    int j_global = threadIdx.y + blockIdx.y * blockDim.y;
 
-    if (j >= startRow && j < endRow && i < max_x) {
+    // Local thread indices within the segment
+    int i = startCol + i_global;
+    int j = startRow + j_global;
+
+    if (i >= startCol && i < endCol && j >= startRow && j < endRow) {
         int pixel_index = j * max_x + i;
         curandState local_rand_state = rand_state[pixel_index];
 
@@ -223,35 +229,47 @@ int main() {
     checkCudaErrors(cudaDeviceSynchronize());
 
 
-    // Crearea stream-urilor
-    int num_streams = 4;
-    cudaStream_t* streams = new cudaStream_t[num_streams];
-    for (int i = 0; i < num_streams; ++i) {
+    // Create streams
+    int num_streams_height = 2; // Number of streams along height
+    int num_streams_width = 4;  // Number of streams along width
+    int total_streams = num_streams_height * num_streams_width;
+    cudaStream_t* streams = new cudaStream_t[total_streams];
+
+    for (int i = 0; i < total_streams; ++i) {
         cudaStreamCreate(&streams[i]);
     }
 
-    int segmentSize = ny / num_streams; // Împărțiți imaginea în segmente orizontale
+    // Determine segment sizes
+    int segmentSizeHeight = ny / num_streams_height;
+    int segmentSizeWidth = nx / num_streams_width;
 
-    // Procesarea imaginii în porțiuni, folosind stream-uri diferite
-    for (int s = 0; s < num_streams; ++s) {
-        int startRow = s * segmentSize;
-        int endRow = (s + 1) * segmentSize;
-        if (s == num_streams - 1) {
-            endRow = ny; // Asigurați-vă că ultimul segment acoperă restul imaginii
+    // Launch kernels for each segment
+    for (int h = 0; h < num_streams_height; ++h) {
+        for (int w = 0; w < num_streams_width; ++w) {
+            int streamIdx = h * num_streams_width + w;
+
+            int startRow = h * segmentSizeHeight;
+            int endRow = (h + 1) * segmentSizeHeight;
+            if (h == num_streams_height - 1) endRow = ny;
+
+            int startCol = w * segmentSizeWidth;
+            int endCol = (w + 1) * segmentSizeWidth;
+            if (w == num_streams_width - 1) endCol = nx;
+
+            // Calculate blocks for this segment
+            dim3 segment_blocks(
+                (endCol - startCol + tile_size_x - 1) / tile_size_x,
+                (endRow - startRow + tile_size_y - 1) / tile_size_y);
+
+            render << < segment_blocks, threads, 0, streams[streamIdx] >> > (
+                d_image_pixels, nx, ny, ns, d_camera, d_world,
+                startRow, endRow, startCol, endCol, d_rand_state_pixels);
         }
-
-        // Lansarea kernel-ului cu stream-ul specific
-        render <<< blocks, threads, 0, streams[s] >> > (
-            d_image_pixels, 
-            nx, ny, ns, 
-            d_camera, 
-            d_world, 
-            startRow, endRow,
-            d_rand_state_pixels);
     }
 
+
     // Așteptarea finalizării tuturor streams
-    for (int i = 0; i < num_streams; ++i) {
+    for (int i = 0; i < total_streams; ++i) {
         checkCudaErrors(cudaStreamSynchronize(streams[i]));
     }
 
@@ -291,7 +309,7 @@ int main() {
     checkCudaErrors(cudaFree(d_image_pixels));
     delete [] h_image_pixels;
 
-    for (int i = 0; i < num_streams; ++i) {
+    for (int i = 0; i < total_streams; ++i) {
         checkCudaErrors(cudaStreamDestroy(streams[i]));
     }
     delete [] streams;
