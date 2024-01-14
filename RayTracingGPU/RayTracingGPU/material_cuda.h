@@ -4,7 +4,7 @@
 #include <curand_kernel.h>
 #include "ray_cuda.h"
 
-struct __align__(16) material {
+struct material {
     enum type {
 		LAMBERTIAN,
 		METAL,
@@ -19,7 +19,7 @@ struct __align__(16) material {
     };
 };
 
-struct __align__(32) record {
+struct record {
     float t;
     vec3 p;
     vec3 normal;
