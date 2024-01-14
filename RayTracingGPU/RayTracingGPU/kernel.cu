@@ -94,9 +94,21 @@ __global__ void render(
 
         // shared camera
         __shared__ camera shared_cam;
+        __shared__ world shared_world;
+        __shared__ sphere shared_objects[488];
 
         if (threadIdx.x == 0 && threadIdx.y == 0) {
+            // copy camera
             copy_camera(&shared_cam, cam);
+
+            // copy objects and world
+            shared_world.size = worldd->size;
+            shared_world.objects = shared_objects;
+
+            // Copy the sphere objects from worldd to shared_objects
+            for (int i = 0; i < shared_world.size; ++i) {
+                shared_objects[i] = worldd->objects[i];
+            }
         }
         __syncthreads();
 
@@ -105,7 +117,7 @@ __global__ void render(
             float u = (i + curand_uniform(&local_rand_state)) / float(max_x);
             float v = (j + curand_uniform(&local_rand_state)) / float(max_y);
             ray r = get_ray(shared_cam, u, v, &local_rand_state);
-            col += get_color(r, *worldd, &local_rand_state);
+            col += get_color(r, shared_world, &local_rand_state);
 
         }
 
@@ -171,9 +183,9 @@ __global__ void free_world(world* d_world, camera* d_camera) {
 }
 
 int main() {
-    int nx = 800; // width
-    int ny = 450; // heigth
-    int ns = 500; // numar de sample uri
+    int nx = 1920; // width
+    int ny = 1080; // heigth
+    int ns = 1000; // numar de sample uri
     int tile_size_x = 16; 
     int tile_size_y = 16;
 
@@ -230,8 +242,8 @@ int main() {
 
 
     // Create streams
-    int num_streams_height = 2; // Number of streams along height
-    int num_streams_width = 4;  // Number of streams along width
+    int num_streams_height = 4; // Number of streams along height
+    int num_streams_width = 8;  // Number of streams along width
     int total_streams = num_streams_height * num_streams_width;
     cudaStream_t* streams = new cudaStream_t[total_streams];
 
@@ -261,7 +273,7 @@ int main() {
                 (endCol - startCol + tile_size_x - 1) / tile_size_x,
                 (endRow - startRow + tile_size_y - 1) / tile_size_y);
 
-            render << < segment_blocks, threads, 0, streams[streamIdx] >> > (
+            render <<< segment_blocks, threads, 0, streams[streamIdx] >> > (
                 d_image_pixels, nx, ny, ns, d_camera, d_world,
                 startRow, endRow, startCol, endCol, d_rand_state_pixels);
         }
@@ -272,11 +284,6 @@ int main() {
     for (int i = 0; i < total_streams; ++i) {
         checkCudaErrors(cudaStreamSynchronize(streams[i]));
     }
-
-    // render the scene
-    /*render <<< blocks, threads >>> (d_image_pixels, nx, ny, ns, d_camera, d_world, d_rand_state_pixels);
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());*/
 
     color* h_image_pixels = new color[num_pixels];
     // copy the image pixels from device to host
