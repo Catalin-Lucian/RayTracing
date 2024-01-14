@@ -84,7 +84,7 @@
   <ItemGroup>
     <ClInclude Include="camera_cuda.h" />
     <ClInclude Include="hitable_cuda.h" />
-    <ClInclude Include="hitable_list_cuda.h" />
+    <ClInclude Include="world_cuda.h" />
     <ClInclude Include="image_cuda.h" />
     <ClInclude Include="interval_cuda.h" />
     <ClInclude Include="material_cuda.h" />

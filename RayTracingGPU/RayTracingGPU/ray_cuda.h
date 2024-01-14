@@ -3,15 +3,23 @@
 #include <cuda_runtime.h>
 #include "vec3_cuda.h"
 
-class ray
-{
-public:
-    __device__ ray() {}
-    __device__ ray(const vec3& _origin, const vec3& _direction) { origin = _origin; direction = _direction; }
-    __device__ vec3 at(float t) const { return origin + t * direction; }
 
+struct ray {
     vec3 origin;
     vec3 direction;
 };
+
+__device__ inline 
+ray make_ray(vec3 origin, vec3 direction) {
+	ray d;
+	d.origin = origin;
+	d.direction = direction;
+	return d;
+}
+
+__device__ inline
+vec3 operator+(const ray& r, float t) {
+	return r.origin + t * r.direction;
+}
 
 #endif

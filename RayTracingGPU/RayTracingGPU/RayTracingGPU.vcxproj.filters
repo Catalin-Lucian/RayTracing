@@ -27,7 +27,7 @@
     <ClInclude Include="hitable_cuda.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="hitable_list_cuda.h">
+    <ClInclude Include="world_cuda.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="camera_cuda.h">

@@ -8,7 +8,6 @@
 #include <vector>
 #include "interval_cuda.h"
 
-using Color = vec3;
 using namespace std;
 
 
@@ -59,10 +58,10 @@ public:
 
         for (int y = height - 1; y >= 0; y--) {
             for (int x = 0; x < width; x++) {
-                vec3 pixel = image[y][x] * 255.99;
-                unsigned char r = static_cast<unsigned char>(pixel[0]);
-                unsigned char g = static_cast<unsigned char>(pixel[1]);
-                unsigned char b = static_cast<unsigned char>(pixel[2]);
+                auto pixel = image[y][x] * 255.99;
+                unsigned char r = static_cast<unsigned char>(pixel.r);
+                unsigned char g = static_cast<unsigned char>(pixel.g);
+                unsigned char b = static_cast<unsigned char>(pixel.b);
                 unsigned char color[] = { b, g, r };
                 file.write(reinterpret_cast<char*>(color), 3);
             }
@@ -72,30 +71,26 @@ public:
         file.close();
 
         // Request operating system to display image
-#ifdef _WIN32
-        system("start image.bmp");
-#else
-        system("xdg-open image.bmp");
-#endif
+        #ifdef _WIN32
+            system("start image.bmp");
+        #else
+            system("xdg-open image.bmp");
+        #endif
     }
 
 
 
-    void setPixel(int i, int j, Color pixelColor, int samples_per_pixel)
+    void setPixel(int i, int j, color pixelColor)
     {
-        // Divide the color by the number of samples
-        auto scale = 1.0 / samples_per_pixel;
-        pixelColor *= scale;
-
         // Gamma-correct for gamma=2.0
-        pixelColor[0] = linear_to_gamma(pixelColor[0]);
-        pixelColor[1] = linear_to_gamma(pixelColor[1]);
-        pixelColor[2] = linear_to_gamma(pixelColor[2]);
+        pixelColor.r = linear_to_gamma(pixelColor.r);
+        pixelColor.g = linear_to_gamma(pixelColor.g);
+        pixelColor.b = linear_to_gamma(pixelColor.b);
 
         static const Interval color_range(0.0, 1.0);
-        image[i][j][0] = color_range.clamp(pixelColor.x());
-        image[i][j][1] = color_range.clamp(pixelColor.y());
-        image[i][j][2] = color_range.clamp(pixelColor.z());
+        image[i][j].r = color_range.clamp(pixelColor.r);
+        image[i][j].g = color_range.clamp(pixelColor.g);
+        image[i][j].b = color_range.clamp(pixelColor.b);
     }
 
     double linear_to_gamma(double linear_component)
@@ -104,7 +99,7 @@ public:
     }
 
 private:
-    vector<vector<Color>> image;
+    vector<vector<color>> image;
 };
 
 #endif
