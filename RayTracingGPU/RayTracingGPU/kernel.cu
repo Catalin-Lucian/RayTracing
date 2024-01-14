@@ -71,17 +71,16 @@ __global__ void rand_pixels_init(int max_x, int max_y, curandState* rand_state) 
 }
 
 __global__ void render(
-    vec3* image, 
-    int max_x, 
-    int max_y, 
-    int ns, 
-    camera* cam, 
-    world* worldd, 
+    vec3* image,
+    int max_x,
+    int max_y,
+    int ns,
+    camera* cam,
+    world* worldd,
     curandState* rand_state
 ) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
-
 
     if ((i < max_x) && (j < max_y)) {
         int pixel_index = j * max_x + i;
@@ -96,15 +95,25 @@ __global__ void render(
         __syncthreads();
 
         color col = make_vec3(0.f, 0.f, 0.f);
-        #pragma unroll
-        for (int s = 0; s < ns; s++) {
-            float u = (i + curand_uniform(&local_rand_state)) / float(max_x);
-            float v = (j + curand_uniform(&local_rand_state)) / float(max_y);
-            ray r = get_ray(shared_cam, u, v, &local_rand_state);
-            col += get_color(r, *worldd, &local_rand_state);
-        }
+        int tid_x = threadIdx.x + blockIdx.x * blockDim.x;
+        int tid_y = threadIdx.y + blockIdx.y * blockDim.y;
 
-        //rand_state[pixel_index] = local_rand_state;
+        // Calculează start și end pentru bucla for pe direcțiile x și y
+        int start_s = tid_x * ns / blockDim.x;
+        int end_s = (tid_x + 1) * ns / blockDim.x;
+
+        int start_t = tid_y * ns / blockDim.y;
+        int end_t = (tid_y + 1) * ns / blockDim.y;
+
+        // Calculează media culorilor pentru fiecare rază
+        for (int s = start_s; s < end_s; s++) {
+            float u = (i + curand_uniform(&local_rand_state)) / float(max_x);
+            for (int t = start_t; t < end_t; t++) {
+                float v = (j + curand_uniform(&local_rand_state)) / float(max_y);
+                ray r = get_ray(shared_cam, u, v, &local_rand_state);
+                col += get_color(r, *worldd, &local_rand_state);
+            }
+        }
 
         col /= float(ns);
         image[pixel_index] = col;
@@ -170,7 +179,7 @@ __global__ void free_world(world* d_world, camera* d_camera) {
 int main() {
     int nx = 800; // width
     int ny = 450; // heigth
-    int ns = 100; // numar de sample uri
+    int ns = 500; // numar de sample uri
     int tile_size_x = 32; 
     int tile_size_y = 32;
 
