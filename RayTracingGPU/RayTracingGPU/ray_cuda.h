@@ -1,8 +1,6 @@
 #ifndef RAYH
 #define RAYH
 #include <cuda_runtime.h>
-#include "vec3_cuda.h"
-
 
 struct ray {
     vec3 origin;

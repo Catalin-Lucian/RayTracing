@@ -1,7 +1,6 @@
 #ifndef COLOR_H
 #define COLOR_H
 
-#include "vec3_cuda.h"
 
 #include <fstream>
 #include <iostream>

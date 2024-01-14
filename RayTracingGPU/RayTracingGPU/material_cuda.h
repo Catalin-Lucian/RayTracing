@@ -2,10 +2,8 @@
 #define MATERIALH
 
 #include <curand_kernel.h>
-#include "hitable_cuda.h"
+#include "ray_cuda.h"
 
-struct ray;
-using namespace hittable;
 
 
 struct material {
@@ -21,6 +19,13 @@ struct material {
         float fuzz;      // For METAL
         float ref_idx;   // For DIELECTRIC
     };
+};
+
+struct record {
+    float t;
+    vec3 p;
+    vec3 normal;
+    material material; // This line requires the complete type of material
 };
 
 __device__ inline 

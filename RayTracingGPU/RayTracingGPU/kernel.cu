@@ -17,7 +17,6 @@
 #define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
 #define RND (curand_uniform(&local_rand_state))
 
-using namespace hittable;
 
 void check_cuda(cudaError_t result, char const* const func, const char* const file, int const line) {
     if (result) {
@@ -29,7 +28,7 @@ void check_cuda(cudaError_t result, char const* const func, const char* const fi
     }
 }
 
-__device__ vec3 get_color(const ray& r, hittable::world& world, curandState* local_rand_state) {
+__device__ vec3 get_color(const ray& r, world& world, curandState* local_rand_state) {
     ray cur_ray = r;
     vec3 cur_attenuation = make_vec3(1.0f, 1.0f, 1.0f);
    
@@ -77,29 +76,39 @@ __global__ void render(
     int max_y, 
     int ns, 
     camera* cam, 
-    world* world, 
+    world* worldd, 
     curandState* rand_state
 ) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
 
-    if ((i >= max_x) || (j >= max_y)) return;
-    
-    int pixel_index = j * max_x + i;
-    curandState local_rand_state = rand_state[pixel_index];
-    
-    color col = make_vec3(0.f, 0.f, 0.f);
-    for (int s = 0; s < ns; s++) {
-        float u = float(i + curand_uniform(&local_rand_state)) / float(max_x);
-        float v = float(j + curand_uniform(&local_rand_state)) / float(max_y);
-        ray r = get_ray(*cam, u, v, &local_rand_state);
-        col += get_color(r, *world, &local_rand_state);
-    }
 
-    //rand_state[pixel_index] = local_rand_state;
-    
-    col /= float(ns);
-    image[pixel_index] = col;
+    if ((i < max_x) && (j < max_y)) {
+        int pixel_index = j * max_x + i;
+        curandState local_rand_state = rand_state[pixel_index];
+
+        // shared camera
+        __shared__ camera shared_cam;
+
+        if (threadIdx.x == 0 && threadIdx.y == 0) {
+            copy_camera(&shared_cam, cam);
+        }
+        __syncthreads();
+
+        color col = make_vec3(0.f, 0.f, 0.f);
+        #pragma unroll
+        for (int s = 0; s < ns; s++) {
+            float u = (i + curand_uniform(&local_rand_state)) / float(max_x);
+            float v = (j + curand_uniform(&local_rand_state)) / float(max_y);
+            ray r = get_ray(shared_cam, u, v, &local_rand_state);
+            col += get_color(r, *worldd, &local_rand_state);
+        }
+
+        //rand_state[pixel_index] = local_rand_state;
+
+        col /= float(ns);
+        image[pixel_index] = col;
+    }
 }
 
 __global__ void create_world(world* world, sphere* d_objects, camera* camera, int nx, int ny, curandState* rand_state) {
@@ -107,29 +116,30 @@ __global__ void create_world(world* world, sphere* d_objects, camera* camera, in
         curandState local_rand_state = *rand_state;
 
         d_objects[0] = make_sphere(make_vec3(0.f, -1000.0f, -1.f), 1000.f, make_lambertian(make_vec3(0.5f, 0.5f, 0.5f)));
-        int i = 1;
+        int idx = 1;
         for (int a = -11; a < 11; a++) {
             for (int b = -11; b < 11; b++) {
                 float choose_mat = RND;
                 vec3 center = make_vec3(a + RND, 0.2f, b + RND);
+                vec3 material_color;
                 if (choose_mat < 0.8f) {
-                    d_objects[i++] = make_sphere(center, 0.2f,
-                        make_lambertian(make_vec3(RND * RND, RND * RND, RND * RND)));
+                    material_color = make_vec3(RND * RND, RND * RND, RND * RND);
                 }
                 else if (choose_mat < 0.95f) {
-                    d_objects[i++] = make_sphere(center, 0.2f,
-                        make_metal(make_vec3(0.5f * (1.0f + RND), 0.5f * (1.0f + RND), 0.5f * (1.0f + RND)), 0.5f * RND));
+                    material_color = make_vec3(0.5f * (1.0f + RND), 0.5f * (1.0f + RND), 0.5f * (1.0f + RND));
                 }
                 else {
-                    d_objects[i++] = make_sphere(center, 0.2f, make_dielectric(1.5f));
+                    material_color = make_vec3(1.0f, 1.0f, 1.0f);
                 }
+                d_objects[idx++] = make_sphere(center, 0.2f, make_lambertian(material_color));
             }
         }
 
-        d_objects[i++] = make_sphere(make_vec3(0.f, 1.f, 0.f), 1.0f, make_dielectric(1.5f));
-        d_objects[i++] = make_sphere(make_vec3(-4.f, 1.f, 0.f), 1.0f, make_lambertian(make_vec3(0.4f, 0.2f, 0.1f)));
-        d_objects[i++] = make_sphere(make_vec3(4.f, 1.f, 0.f), 1.0f, make_metal(make_vec3(0.7f, 0.6f, 0.5f), 0.0f));
-        init_world(world, d_objects, 488);
+        d_objects[idx++] = make_sphere(make_vec3(0.f, 1.f, 0.f), 1.0f, make_dielectric(1.5f));
+        d_objects[idx++] = make_sphere(make_vec3(-4.f, 1.f, 0.f), 1.0f, make_lambertian(make_vec3(0.4f, 0.2f, 0.1f)));
+        d_objects[idx++] = make_sphere(make_vec3(4.f, 1.f, 0.f), 1.0f, make_metal(make_vec3(0.7f, 0.6f, 0.5f), 0.0f));
+
+        init_world(world, d_objects, idx);
 
         //*rand_state = local_rand_state;
 
@@ -160,14 +170,14 @@ __global__ void free_world(world* d_world, camera* d_camera) {
 int main() {
     int nx = 800; // width
     int ny = 450; // heigth
-    int ns = 500; // numar de sample uri
-    int tx = 8;
-    int ty = 8;
+    int ns = 100; // numar de sample uri
+    int tile_size_x = 32; 
+    int tile_size_y = 32;
 
     Image image(nx, ny);
 
     std::cerr << "Rendering a " << nx << "x" << ny << " image with " << ns << " samples per pixel ";
-    std::cerr << "in " << tx << "x" << ty << " blocks.\n";
+    std::cerr << "in " << tile_size_x << "x" << tile_size_y << " blocks.\n";
 
     int num_pixels = nx * ny;
     size_t pixels_size = num_pixels * sizeof(color);
@@ -207,8 +217,8 @@ int main() {
     checkCudaErrors(cudaDeviceSynchronize());
 
     // calculate blocks and threads
-    dim3 blocks(nx / tx + 1, ny / ty + 1);
-    dim3 threads(tx, ty);
+    dim3 blocks((nx + tile_size_x - 1) / tile_size_x, (ny + tile_size_y - 1) / tile_size_y);
+    dim3 threads(tile_size_x, tile_size_y);
 
     // init random state for each pixel
     rand_pixels_init <<< blocks, threads >> > (nx, ny, d_rand_state_pixels);
