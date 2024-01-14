@@ -2,7 +2,7 @@
 #define RAYH
 #include <cuda_runtime.h>
 
-struct ray {
+struct __align__(16) ray {
     vec3 origin;
     vec3 direction;
 };

@@ -2,7 +2,7 @@
 #define SPHEREH
 
 
-struct __align__(16) sphere
+struct __align__(32) sphere
 {
     vec3 center;
     float radius;

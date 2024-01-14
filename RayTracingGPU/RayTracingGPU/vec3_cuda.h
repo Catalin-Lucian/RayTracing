@@ -7,7 +7,7 @@
 #include <cuda_runtime.h>
 
 
-struct vec3 {
+struct __align__(16) vec3 {
     union {
         struct {
             float x, y, z;
