@@ -225,7 +225,7 @@ int main() {
 
     // Crearea stream-urilor
     int num_streams = 4;
-    cudaStream_t streams[4];
+    cudaStream_t* streams = new cudaStream_t[num_streams];
     for (int i = 0; i < num_streams; ++i) {
         cudaStreamCreate(&streams[i]);
     }
@@ -253,7 +253,6 @@ int main() {
     // Așteptarea finalizării tuturor streams
     for (int i = 0; i < num_streams; ++i) {
         checkCudaErrors(cudaStreamSynchronize(streams[i]));
-        checkCudaErrors(cudaStreamDestroy(streams[i]));
     }
 
     // render the scene
@@ -290,11 +289,12 @@ int main() {
     checkCudaErrors(cudaFree(d_rand_state_pixels));
     checkCudaErrors(cudaFree(d_rand_state_world));
     checkCudaErrors(cudaFree(d_image_pixels));
-
     delete [] h_image_pixels;
+
     for (int i = 0; i < num_streams; ++i) {
         checkCudaErrors(cudaStreamDestroy(streams[i]));
     }
+    delete [] streams;
 
     cudaDeviceReset();
 }
