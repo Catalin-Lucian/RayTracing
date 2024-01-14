@@ -185,7 +185,7 @@ __global__ void free_world(world* d_world, camera* d_camera) {
 int main() {
     int nx = 1920; // width
     int ny = 1080; // heigth
-    int ns = 1000; // numar de sample uri
+    int ns = 500; // numar de sample uri
     int tile_size_x = 16; 
     int tile_size_y = 16;
 
@@ -242,8 +242,8 @@ int main() {
 
 
     // Create streams
-    int num_streams_height = 4; // Number of streams along height
-    int num_streams_width = 8;  // Number of streams along width
+    int num_streams_height = 1; // Number of streams along height
+    int num_streams_width = 4;  // Number of streams along width
     int total_streams = num_streams_height * num_streams_width;
     cudaStream_t* streams = new cudaStream_t[total_streams];
 
