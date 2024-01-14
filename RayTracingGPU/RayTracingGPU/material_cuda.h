@@ -4,8 +4,6 @@
 #include <curand_kernel.h>
 #include "ray_cuda.h"
 
-
-
 struct material {
     enum type {
 		LAMBERTIAN,
@@ -25,7 +23,7 @@ struct record {
     float t;
     vec3 p;
     vec3 normal;
-    material material; // This line requires the complete type of material
+    material material;
 };
 
 __device__ inline 

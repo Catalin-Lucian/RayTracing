@@ -170,9 +170,9 @@ __global__ void free_world(world* d_world, camera* d_camera) {
 int main() {
     int nx = 800; // width
     int ny = 450; // heigth
-    int ns = 100; // numar de sample uri
-    int tile_size_x = 32; 
-    int tile_size_y = 32;
+    int ns = 500; // numar de sample uri
+    int tile_size_x = 16; 
+    int tile_size_y = 16;
 
     Image image(nx, ny);
 
