@@ -72,17 +72,17 @@ __global__ void rand_pixels_init(int max_x, int max_y, curandState* rand_state) 
 
 __global__ void render(
     vec3* image,
-    int max_x,
-    int max_y,
+    int max_x, int max_y,
     int ns,
     camera* cam,
     world* worldd,
+    int startRow, int endRow,
     curandState* rand_state
 ) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
 
-    if ((i < max_x) && (j < max_y)) {
+    if (j >= startRow && j < endRow && i < max_x) {
         int pixel_index = j * max_x + i;
         curandState local_rand_state = rand_state[pixel_index];
 
@@ -95,24 +95,12 @@ __global__ void render(
         __syncthreads();
 
         color col = make_vec3(0.f, 0.f, 0.f);
-        int tid_x = threadIdx.x + blockIdx.x * blockDim.x;
-        int tid_y = threadIdx.y + blockIdx.y * blockDim.y;
-
-        // Calculează start și end pentru bucla for pe direcțiile x și y
-        int start_s = tid_x * ns / blockDim.x;
-        int end_s = (tid_x + 1) * ns / blockDim.x;
-
-        int start_t = tid_y * ns / blockDim.y;
-        int end_t = (tid_y + 1) * ns / blockDim.y;
-
-        // Calculează media culorilor pentru fiecare rază
-        for (int s = start_s; s < end_s; s++) {
+        for (int s = 0; s < ns; s++) {
             float u = (i + curand_uniform(&local_rand_state)) / float(max_x);
-            for (int t = start_t; t < end_t; t++) {
-                float v = (j + curand_uniform(&local_rand_state)) / float(max_y);
-                ray r = get_ray(shared_cam, u, v, &local_rand_state);
-                col += get_color(r, *worldd, &local_rand_state);
-            }
+            float v = (j + curand_uniform(&local_rand_state)) / float(max_y);
+            ray r = get_ray(shared_cam, u, v, &local_rand_state);
+            col += get_color(r, *worldd, &local_rand_state);
+
         }
 
         col /= float(ns);
@@ -234,10 +222,44 @@ int main() {
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
+
+    // Crearea stream-urilor
+    int num_streams = 4;
+    cudaStream_t streams[4];
+    for (int i = 0; i < num_streams; ++i) {
+        cudaStreamCreate(&streams[i]);
+    }
+
+    int segmentSize = ny / num_streams; // Împărțiți imaginea în segmente orizontale
+
+    // Procesarea imaginii în porțiuni, folosind stream-uri diferite
+    for (int s = 0; s < num_streams; ++s) {
+        int startRow = s * segmentSize;
+        int endRow = (s + 1) * segmentSize;
+        if (s == num_streams - 1) {
+            endRow = ny; // Asigurați-vă că ultimul segment acoperă restul imaginii
+        }
+
+        // Lansarea kernel-ului cu stream-ul specific
+        render <<< blocks, threads, 0, streams[s] >> > (
+            d_image_pixels, 
+            nx, ny, ns, 
+            d_camera, 
+            d_world, 
+            startRow, endRow,
+            d_rand_state_pixels);
+    }
+
+    // Așteptarea finalizării tuturor streams
+    for (int i = 0; i < num_streams; ++i) {
+        checkCudaErrors(cudaStreamSynchronize(streams[i]));
+        checkCudaErrors(cudaStreamDestroy(streams[i]));
+    }
+
     // render the scene
-    render <<< blocks, threads >>> (d_image_pixels, nx, ny, ns, d_camera, d_world, d_rand_state_pixels);
+    /*render <<< blocks, threads >>> (d_image_pixels, nx, ny, ns, d_camera, d_world, d_rand_state_pixels);
     checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
+    checkCudaErrors(cudaDeviceSynchronize());*/
 
     color* h_image_pixels = new color[num_pixels];
     // copy the image pixels from device to host
@@ -268,6 +290,11 @@ int main() {
     checkCudaErrors(cudaFree(d_rand_state_pixels));
     checkCudaErrors(cudaFree(d_rand_state_world));
     checkCudaErrors(cudaFree(d_image_pixels));
+
     delete [] h_image_pixels;
+    for (int i = 0; i < num_streams; ++i) {
+        checkCudaErrors(cudaStreamDestroy(streams[i]));
+    }
+
     cudaDeviceReset();
 }
