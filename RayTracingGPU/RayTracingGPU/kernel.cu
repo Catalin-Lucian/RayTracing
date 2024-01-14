@@ -180,8 +180,8 @@ int main() {
     int nx = 800; // width
     int ny = 450; // heigth
     int ns = 500; // numar de sample uri
-    int tile_size_x = 32; 
-    int tile_size_y = 32;
+    int tile_size_x = 16; 
+    int tile_size_y = 16;
 
     Image image(nx, ny);
 
@@ -190,14 +190,14 @@ int main() {
 
     int num_pixels = nx * ny;
     size_t pixels_size = num_pixels * sizeof(color);
-    color* image_pixels;
-    checkCudaErrors(cudaMallocManaged((void**)&image_pixels, pixels_size));
+    color* d_image_pixels;
+    checkCudaErrors(cudaMalloc((void**) & d_image_pixels, pixels_size));
     
     // allocate random state
     curandState* d_rand_state_pixels;
-    checkCudaErrors(cudaMalloc((void**)&d_rand_state_pixels, num_pixels * sizeof(curandState)));
+    checkCudaErrors(cudaMalloc(&d_rand_state_pixels, num_pixels * sizeof(curandState)));
     curandState* d_rand_state_world;
-    checkCudaErrors(cudaMalloc((void**)&d_rand_state_world, 1 * sizeof(curandState)));
+    checkCudaErrors(cudaMalloc(&d_rand_state_world, 1 * sizeof(curandState)));
 
     // list of objects
     sphere* d_objects;
@@ -235,9 +235,14 @@ int main() {
     checkCudaErrors(cudaDeviceSynchronize());
 
     // render the scene
-    render <<< blocks, threads >>> (image_pixels, nx, ny, ns, d_camera, d_world, d_rand_state_pixels);
+    render <<< blocks, threads >>> (d_image_pixels, nx, ny, ns, d_camera, d_world, d_rand_state_pixels);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
+
+    color* h_image_pixels = new color[num_pixels];
+    // copy the image pixels from device to host
+    checkCudaErrors(cudaMemcpy(h_image_pixels,d_image_pixels, pixels_size, cudaMemcpyDeviceToHost));
+
 
     stop = clock();
     double timer_seconds = ((double)(stop - start)) / CLOCKS_PER_SEC;
@@ -248,7 +253,7 @@ int main() {
     for (int j = ny-1; j >= 0; j--) {
         for (int i = 0; i < nx; i++) {
             size_t pixel_index = j * nx + i;
-            image.setPixel(ny - 1 - j, i, image_pixels[pixel_index]);
+            image.setPixel(ny - 1 - j, i, h_image_pixels[pixel_index]);
         }
     }
 
@@ -262,6 +267,7 @@ int main() {
     checkCudaErrors(cudaFree(d_world));
     checkCudaErrors(cudaFree(d_rand_state_pixels));
     checkCudaErrors(cudaFree(d_rand_state_world));
-    checkCudaErrors(cudaFree(image_pixels));
+    checkCudaErrors(cudaFree(d_image_pixels));
+    delete [] h_image_pixels;
     cudaDeviceReset();
 }
