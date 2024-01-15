@@ -89,9 +89,18 @@ __global__ void render(
 
         // shared camera
         __shared__ camera shared_cam;
+        __shared__ world shared_world;
+        __shared__ sphere shared_objects[488];
 
         if (threadIdx.x == 0 && threadIdx.y == 0) {
             copy_camera(&shared_cam, cam);
+
+            shared_world.size = worldd->size;
+            shared_world.objects = shared_objects;
+
+            for (int i = 0; i < shared_world.size; ++i) {
+                shared_objects[i] = worldd->objects[i];
+            }
         }
         __syncthreads();
 
