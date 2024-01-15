@@ -118,7 +118,6 @@ __global__ void render(
             float v = (j + curand_uniform(&local_rand_state)) / float(max_y);
             ray r = get_ray(shared_cam, u, v, &local_rand_state);
             col += get_color(r, shared_world, &local_rand_state);
-
         }
 
         col /= float(ns);
@@ -137,16 +136,20 @@ __global__ void create_world(world* world, sphere* d_objects, camera* camera, in
                 float choose_mat = RND;
                 vec3 center = make_vec3(a + RND, 0.2f, b + RND);
                 vec3 material_color;
+                material mat;
                 if (choose_mat < 0.8f) {
                     material_color = make_vec3(RND * RND, RND * RND, RND * RND);
+                    mat = make_lambertian(material_color);
                 }
                 else if (choose_mat < 0.95f) {
                     material_color = make_vec3(0.5f * (1.0f + RND), 0.5f * (1.0f + RND), 0.5f * (1.0f + RND));
+                    mat = make_metal(material_color, 0.5f * RND);
                 }
                 else {
                     material_color = make_vec3(1.0f, 1.0f, 1.0f);
+                    mat = make_dielectric(1.5f);
                 }
-                d_objects[idx++] = make_sphere(center, 0.2f, make_lambertian(material_color));
+                d_objects[idx++] = make_sphere(center, 0.2f, mat);
             }
         }
 
