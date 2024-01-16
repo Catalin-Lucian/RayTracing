@@ -28,6 +28,12 @@ void check_cuda(cudaError_t result, char const* const func, const char* const fi
     }
 }
 
+// =============================== constant memory ===============================
+__constant__ camera d_camera;
+__constant__ world d_world;
+
+// ===============================================================================
+
 __device__ vec3 get_color(const ray& r, world& world, curandState* local_rand_state) {
     ray cur_ray = r;
     vec3 cur_attenuation = make_vec3(1.0f, 1.0f, 1.0f);
@@ -56,12 +62,6 @@ __device__ vec3 get_color(const ray& r, world& world, curandState* local_rand_st
     }
 }
 
-__global__ void rand_world_init(curandState* rand_state) {
-    if (threadIdx.x == 0 && blockIdx.x == 0) {
-        curand_init(1984, 0, 0, rand_state);
-    }
-}
-
 __global__ void rand_pixels_init(int max_x, int max_y, curandState* rand_state) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
@@ -74,8 +74,6 @@ __global__ void render(
     vec3* image,
     int max_x, int max_y,
     int ns,
-    camera* cam,
-    world* worldd,
     int startRow, int endRow,
     int startCol, int endCol,
     curandState* rand_state
@@ -92,32 +90,12 @@ __global__ void render(
         int pixel_index = j * max_x + i;
         curandState local_rand_state = rand_state[pixel_index];
 
-        // shared camera
-        __shared__ camera shared_cam;
-        __shared__ world shared_world;
-        __shared__ sphere shared_objects[488];
-
-        if (threadIdx.x == 0 && threadIdx.y == 0) {
-            // copy camera
-            copy_camera(&shared_cam, cam);
-
-            // copy objects and world
-            shared_world.size = worldd->size;
-            shared_world.objects = shared_objects;
-
-            // Copy the sphere objects from worldd to shared_objects
-            for (int i = 0; i < shared_world.size; ++i) {
-                shared_objects[i] = worldd->objects[i];
-            }
-        }
-        __syncthreads();
-
         color col = make_vec3(0.f, 0.f, 0.f);
         for (int s = 0; s < ns; s++) {
             float u = (i + curand_uniform(&local_rand_state)) / float(max_x);
             float v = (j + curand_uniform(&local_rand_state)) / float(max_y);
-            ray r = get_ray(shared_cam, u, v, &local_rand_state);
-            col += get_color(r, shared_world, &local_rand_state);
+            ray r = get_ray(d_camera, u, v, &local_rand_state);
+            col += get_color(r, d_world, &local_rand_state);
         }
 
         col /= float(ns);
@@ -125,64 +103,54 @@ __global__ void render(
     }
 }
 
-__global__ void create_world(world* world, sphere* d_objects, camera* camera, int nx, int ny, curandState* rand_state) {
-    if (threadIdx.x == 0 && blockIdx.x == 0) {
-        curandState local_rand_state = *rand_state;
+void create_world(int nx, int ny, camera& h_camera, world& h_world) {
 
-        d_objects[0] = make_sphere(make_vec3(0.f, -1000.0f, -1.f), 1000.f, make_lambertian(make_vec3(0.5f, 0.5f, 0.5f)));
-        int idx = 1;
-        for (int a = -11; a < 11; a++) {
-            for (int b = -11; b < 11; b++) {
-                float choose_mat = RND;
-                vec3 center = make_vec3(a + RND, 0.2f, b + RND);
+    set_sphere(h_world.objects[0], make_vec3(0.f, -1000.0f, -1.f), 1000.f, make_lambertian(make_vec3(0.5f, 0.5f, 0.5f)));
+    int idx = 1;
+    for (int a = -11; a < 11; a++) {
+        for (int b = -11; b < 11; b++) {
+            float choose_mat = random_float();
+            vec3 center = make_vec3(a + random_float(), 0.2f, b + random_float());
+            //if (length(center - make_vec3(4.f, 0.f, 2.f)) > 0.9) {
                 vec3 material_color;
                 material mat;
                 if (choose_mat < 0.8f) {
-                    material_color = make_vec3(RND * RND, RND * RND, RND * RND);
+                    material_color = make_color(random_float(), random_float(), random_float()) 
+                        * make_color(random_float(), random_float(), random_float());
                     mat = make_lambertian(material_color);
                 }
                 else if (choose_mat < 0.95f) {
-                    material_color = make_vec3(0.5f * (1.0f + RND), 0.5f * (1.0f + RND), 0.5f * (1.0f + RND));
-                    mat = make_metal(material_color, 0.5f * RND);
+                    material_color = make_vec3(random_float(0.5f, 1.f), random_float(0.5f, 1.f), random_float(0.5f, 1.f));
+                    mat = make_metal(material_color, 0.5f * random_float(0.f, 0.5f));
                 }
                 else {
                     material_color = make_vec3(1.0f, 1.0f, 1.0f);
                     mat = make_dielectric(1.5f);
                 }
-                d_objects[idx++] = make_sphere(center, 0.2f, mat);
-            }
+                set_sphere(h_world.objects[idx++], center, 0.2f, mat);
+            //}
         }
-
-        d_objects[idx++] = make_sphere(make_vec3(0.f, 1.f, 0.f), 1.0f, make_dielectric(1.5f));
-        d_objects[idx++] = make_sphere(make_vec3(-4.f, 1.f, 0.f), 1.0f, make_lambertian(make_vec3(0.4f, 0.2f, 0.1f)));
-        d_objects[idx++] = make_sphere(make_vec3(4.f, 1.f, 0.f), 1.0f, make_metal(make_vec3(0.7f, 0.6f, 0.5f), 0.0f));
-
-        init_world(world, d_objects, idx);
-
-        //*rand_state = local_rand_state;
-
-        vec3 lookfrom = make_vec3(13.f, 2.f, 3.f);
-        vec3 lookat = make_vec3(0.f, 0.f, 0.f);
-        float dist_to_focus = length(lookfrom - lookat);
-        float aperture = 0.1;
-        init_camera(
-            camera,
-            lookfrom,
-            lookat,
-            make_vec3(0.f, 1.f, 0.f),
-            30.0f,
-            float(nx) / float(ny),
-            aperture,
-            dist_to_focus
-        );
     }
-}
 
+    set_sphere(h_world.objects[idx++], make_vec3(0.f, 1.f, 0.f), 1.0f, make_dielectric(1.5f));
+    set_sphere(h_world.objects[idx++], make_vec3(-4.f, 1.f, 0.f), 1.0f, make_lambertian(make_vec3(0.4f, 0.2f, 0.1f)));
+    set_sphere(h_world.objects[idx++], make_vec3(4.f, 1.f, 0.f), 1.0f, make_metal(make_vec3(0.7f, 0.6f, 0.5f), 0.0f));
+    h_world.size = idx;
 
-__global__ void free_world(world* d_world, camera* d_camera) {
-    delete [] d_world->objects;
-    delete d_world;
-    delete d_camera;
+    vec3 lookfrom = make_vec3(13.f, 2.f, 3.f);
+    vec3 lookat = make_vec3(0.f, 0.f, 0.f);
+    float dist_to_focus = length(lookfrom - lookat);
+    float aperture = 0.1f;
+    init_camera(
+        d_camera,
+        lookfrom,
+        lookat,
+        make_vec3(0.f, 1.f, 0.f),
+        30.f,
+        float(nx) / float(ny),
+        aperture,
+        dist_to_focus
+    );
 }
 
 int main() {
@@ -205,34 +173,20 @@ int main() {
     // allocate random state
     curandState* d_rand_state_pixels;
     checkCudaErrors(cudaMalloc(&d_rand_state_pixels, num_pixels * sizeof(curandState)));
-    curandState* d_rand_state_world;
-    checkCudaErrors(cudaMalloc(&d_rand_state_world, 1 * sizeof(curandState)));
-
-    // list of objects
-    sphere* d_objects;
-    checkCudaErrors(cudaMalloc(&d_objects, 488 * sizeof(sphere)));
-
-    //world
-    world* d_world;
-    checkCudaErrors(cudaMalloc(&d_world, sizeof(world)));
-
-    // camera
-    camera* d_camera;
-    checkCudaErrors(cudaMalloc(&d_camera, sizeof(camera)));
 
     //// clock to measure time
     clock_t start, stop;
     start = clock();
+    
+    // initialize word and camera 
+    camera h_camera;
+    world h_world;
+    create_world(nx, ny, h_camera, h_world);
 
-    // we need that 2nd random state to be initialized for the world creation
-    rand_world_init <<< 1, 1 >>> (d_rand_state_world);
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-
-    // create world
-    create_world <<<1, 1 >>> (d_world, d_objects, d_camera, nx, ny, d_rand_state_world);
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
+    //  copy camera and world to constant memory
+    //! ignore the warning: the symbol is passed corectly
+    checkCudaErrors(cudaMemcpyToSymbol(d_camera, &h_camera, sizeof(camera)));
+    checkCudaErrors(cudaMemcpyToSymbol(d_world, &h_world, sizeof(world)));
 
     // calculate blocks and threads
     dim3 blocks((nx + tile_size_x - 1) / tile_size_x, (ny + tile_size_y - 1) / tile_size_y);
@@ -246,7 +200,7 @@ int main() {
 
     // Create streams
     int num_streams_height = 1; // Number of streams along height
-    int num_streams_width = 4;  // Number of streams along width
+    int num_streams_width = 1;  // Number of streams along width
     int total_streams = num_streams_height * num_streams_width;
     cudaStream_t* streams = new cudaStream_t[total_streams];
 
@@ -277,8 +231,7 @@ int main() {
                 (endRow - startRow + tile_size_y - 1) / tile_size_y);
 
             render <<< segment_blocks, threads, 0, streams[streamIdx] >> > (
-                d_image_pixels, nx, ny, ns, d_camera, d_world,
-                startRow, endRow, startCol, endCol, d_rand_state_pixels);
+                d_image_pixels, nx, ny, ns, startRow, endRow, startCol, endCol, d_rand_state_pixels);
         }
     }
 
@@ -290,7 +243,7 @@ int main() {
 
     color* h_image_pixels = new color[num_pixels];
     // copy the image pixels from device to host
-    checkCudaErrors(cudaMemcpy(h_image_pixels,d_image_pixels, pixels_size, cudaMemcpyDeviceToHost));
+    checkCudaErrors(cudaMemcpy(h_image_pixels, d_image_pixels, pixels_size, cudaMemcpyDeviceToHost));
 
 
     stop = clock();
@@ -310,12 +263,8 @@ int main() {
 
     // clean up
     checkCudaErrors(cudaDeviceSynchronize());
-    free_world <<<1, 1 >>> (d_world, d_camera);
     checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaFree(d_camera));
-    checkCudaErrors(cudaFree(d_world));
     checkCudaErrors(cudaFree(d_rand_state_pixels));
-    checkCudaErrors(cudaFree(d_rand_state_world));
     checkCudaErrors(cudaFree(d_image_pixels));
     delete [] h_image_pixels;
 

@@ -9,13 +9,20 @@ struct __align__(32) sphere
     material material;
 };
 
-__device__ inline
+__device__ __host__ inline
 sphere make_sphere(vec3 center, float radius,material mat){
 	sphere s;
 	s.center = center;
 	s.radius = radius;
 	s.material = mat;
 	return s;
+}
+
+__device__ __host__ inline
+void set_sphere(sphere& s, vec3 center, float radius, material mat){
+	s.center = center;
+	s.radius = radius;
+	s.material = mat;
 }
     
 

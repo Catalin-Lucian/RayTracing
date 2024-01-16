@@ -5,33 +5,33 @@
 
 struct world
 {
-    sphere* objects;
+    sphere objects[488];
     int size;
 };
 
-__device__ inline
-world init_world(world* world, sphere* objects, int size) {
-	world->objects = objects;
-	world->size = size;
-}
+//__host__ __device__ inline
+//void init_world(world* world, sphere* objects, int size) {
+//	world->objects = objects;
+//	world->size = size;
+//}
 
-__device__
-world clone(const world& w) {
-	world w2;
-	w2.objects = new sphere[w.size];
-	w2.size = w.size;
-	for (int i = 0; i < w.size; i++) {
-		w2.objects[i] = w.objects[i];
-	}
-	return w2;
-}
+//__device__
+//world clone(const world& w) {
+//	world w2;
+//	w2.objects = new sphere[w.size];
+//	w2.size = w.size;
+//	for (int i = 0; i < w.size; i++) {
+//		w2.objects[i] = w.objects[i];
+//	}
+//	return w2;
+//}
 
-__device__
-void copy_world(world* newWorld, world* w) {
-	newWorld->objects = new sphere[w->size];
-	newWorld->size = w->size;
-	memcpy(newWorld->objects, w->objects, w->size * sizeof(sphere));
-}
+//__device__
+//void copy_world(world* newWorld, world* w) {
+//	newWorld->objects = new sphere[w->size];
+//	newWorld->size = w->size;
+//	memcpy(newWorld->objects, w->objects, w->size * sizeof(sphere));
+//}
 
 __device__
 bool hit(const world& w, const ray& r, float t_min, float t_max, record& rec) {

@@ -19,32 +19,32 @@ struct __align__(16) camera
     float lens_radius;
 };
 
-__device__ void copy_camera(camera* to, camera* from)
-{
-    to->origin = from->origin;
-    to->lower_left_corner = from->lower_left_corner;
-    to->horizontal = from->horizontal;
-    to->vertical = from->vertical;
-    to->u = from->u;
-    to->v = from->v;
-    to->w = from->w;
-    to->lens_radius = from->lens_radius;
-}
+//__device__ void copy_camera(camera* to, camera* from)
+//{
+//    to->origin = from->origin;
+//    to->lower_left_corner = from->lower_left_corner;
+//    to->horizontal = from->horizontal;
+//    to->vertical = from->vertical;
+//    to->u = from->u;
+//    to->v = from->v;
+//    to->w = from->w;
+//    to->lens_radius = from->lens_radius;
+//}
 
-__device__ void init_camera(camera *cam, vec3 lookfrom, vec3 lookat, vec3 vup, float vfov, float aspect, float aperture, float focus_dist)
+__host__ __device__ void init_camera(camera &cam, vec3 lookfrom, vec3 lookat, vec3 vup, float vfov, float aspect, float aperture, float focus_dist)
 {
     // vfov is top to bottom in degrees
-    cam->lens_radius = aperture / 2.0f;
+    cam.lens_radius = aperture / 2.0f;
     float theta = vfov * ((float)M_PI) / 180.0f;
     float half_height = tan(theta / 2.0f);
     float half_width = aspect * half_height;
-    cam->origin = lookfrom;
-    cam->w = make_unit(lookfrom - lookat);
-    cam->u = make_unit(cross(vup, cam->w));
-    cam->v = cross(cam->w, cam->u);
-    cam->lower_left_corner = cam->origin - half_width * focus_dist * cam->u - half_height * focus_dist * cam->v - focus_dist * cam->w;
-    cam->horizontal = 2.0f * half_width * focus_dist * cam->u;
-    cam->vertical = 2.0f * half_height * focus_dist * cam->v;
+    cam.origin = lookfrom;
+    cam.w = make_unit(lookfrom - lookat);
+    cam.u = make_unit(cross(vup, cam.w));
+    cam.v = cross(cam.w, cam.u);
+    cam.lower_left_corner = cam.origin - half_width * focus_dist * cam.u - half_height * focus_dist * cam.v - focus_dist * cam.w;
+    cam.horizontal = 2.0f * half_width * focus_dist * cam.u;
+    cam.vertical = 2.0f * half_height * focus_dist * cam.v;
 }
 
 __device__ vec3 random_in_unit_disk(curandState *local_rand_state)

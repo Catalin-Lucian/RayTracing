@@ -57,7 +57,7 @@ public:
 
         for (int y = height - 1; y >= 0; y--) {
             for (int x = 0; x < width; x++) {
-                auto pixel = image[y][x] * 255.99;
+                auto pixel = image[y][x] * 255.99f;
                 unsigned char r = static_cast<unsigned char>(pixel.r);
                 unsigned char g = static_cast<unsigned char>(pixel.g);
                 unsigned char b = static_cast<unsigned char>(pixel.b);
@@ -92,7 +92,7 @@ public:
         image[i][j].b = color_range.clamp(pixelColor.b);
     }
 
-    double linear_to_gamma(double linear_component)
+    float linear_to_gamma(float linear_component)
     {
         return sqrt(linear_component);
     }
