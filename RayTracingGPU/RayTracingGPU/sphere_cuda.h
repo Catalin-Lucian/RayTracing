@@ -2,14 +2,14 @@
 #define SPHEREH
 
 
-struct sphere
+struct __align__(32) sphere
 {
     vec3 center;
     float radius;
     material material;
 };
 
-__device__ __host__
+__device__ __host__ inline
 sphere make_sphere(vec3 center, float radius,material mat){
 	sphere s;
 	s.center = center;
@@ -18,7 +18,7 @@ sphere make_sphere(vec3 center, float radius,material mat){
 	return s;
 }
 
-__device__ __host__ 
+__device__ __host__ inline
 void set_sphere(sphere& s, vec3 center, float radius, material mat){
 	s.center = center;
 	s.radius = radius;

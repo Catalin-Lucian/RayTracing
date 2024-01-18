@@ -26,7 +26,7 @@ struct record {
     material material; // This line requires the complete type of material
 };
 
-__device__ __host__ 
+__device__ __host__ inline
 material make_lambertian(vec3 albedo) {
 	material m;
 	m.type = material::LAMBERTIAN;
@@ -34,7 +34,7 @@ material make_lambertian(vec3 albedo) {
 	return m;
 }
 
-__device__ __host__ 
+__device__ __host__ inline
 material make_metal(vec3 albedo, float fuzz) {
 	material m;
 	m.type = material::METAL;
@@ -46,7 +46,7 @@ material make_metal(vec3 albedo, float fuzz) {
 	return m;
 }
 
-__device__ __host__ 
+__device__ __host__ inline
 material make_dielectric(float ref_idx) {
 	material m;
 	m.type = material::DIELECTRIC;
@@ -162,7 +162,7 @@ bool scatter_dielectric(
     return true;
 }
 
-__device__
+__device__ inline
 bool scatter(
     const material& mat,
     const ray& r_in,

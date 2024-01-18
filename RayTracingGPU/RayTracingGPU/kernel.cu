@@ -155,7 +155,7 @@ void create_world(int nx, int ny, camera& h_camera, world& h_world) {
 int main() {
     int nx = 1920; // width
     int ny = 1080; // heigth
-    int ns = 100; // numar de sample uri
+    int ns = 5; // numar de sample uri
     int tile_size_x = 16; 
     int tile_size_y = 16;
 

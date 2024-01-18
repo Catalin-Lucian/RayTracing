@@ -21,7 +21,7 @@ struct  vec3 {
 using point3 = vec3;
 using color = vec3;
 
-__host__ __device__ 
+__host__ __device__ inline
 vec3 make_vec3(float x, float y, float z) {
 	vec3 d;
 	d.x = x;
@@ -30,7 +30,7 @@ vec3 make_vec3(float x, float y, float z) {
 	return d;
 }
 
-__host__ __device__ 
+__host__ __device__ inline
 color make_color(float r, float g, float b) {
     color d;
     d.r = r;
@@ -44,7 +44,7 @@ vec3 operator+(vec3 a, vec3 b) {
 	return make_vec3(a.x + b.x, a.y + b.y, a.z + b.z);
 }
 
-__host__ __device__ 
+__host__ __device__ inline
 vec3 operator+=(vec3& a, vec3 b) {
 	a.x += b.x; 
 	a.y += b.y; 
@@ -57,7 +57,7 @@ vec3 operator-(vec3 a, vec3 b) {
 	return make_vec3(a.x - b.x, a.y - b.y, a.z - b.z);
 }
 
-__host__ __device__ 
+__host__ __device__ inline
 vec3 operator-=(vec3& a, vec3 b) {
 	a.x -= b.x; 
 	a.y -= b.y; 
@@ -65,12 +65,12 @@ vec3 operator-=(vec3& a, vec3 b) {
 	return a;
 }
 
-__host__ __device__ 
+__host__ __device__ inline
 vec3 operator*(vec3 a, vec3 b) {
 	return make_vec3(a.x * b.x, a.y * b.y, a.z * b.z);
 }
 
-__host__ __device__ 
+__host__ __device__ inline
 vec3 operator*=(vec3& a, vec3 b) {
 	a.x *= b.x; 
 	a.y *= b.y; 
@@ -83,7 +83,7 @@ vec3 operator/(vec3 a, vec3 b) {
 	return make_vec3(a.x / b.x, a.y / b.y, a.z / b.z);
 }
 
-__host__ __device__
+__host__ __device__ inline
 vec3 operator/=(vec3& a, vec3 b) {
 	a.x /= b.x; 
 	a.y /= b.y; 
@@ -96,7 +96,7 @@ vec3 operator*(vec3 a, float b) {
 	return make_vec3(a.x * b, a.y * b, a.z * b);
 }
 
-__host__ __device__ 
+__host__ __device__ inline
 vec3 operator*=(vec3& a, float b) {
 	a.x *= b; 
 	a.y *= b; 
@@ -109,7 +109,7 @@ vec3 operator/(vec3 a, float b) {
 	return make_vec3(a.x / b, a.y / b, a.z / b);
 }
 
-__host__ __device__ 
+__host__ __device__ inline
 vec3 operator/=(vec3& a, float b) {
 	a.x /= b; 
 	a.y /= b; 
@@ -137,7 +137,7 @@ float dot(vec3 a, vec3 b) {
 	return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
-__host__ __device__
+__host__ __device__ inline
 vec3 cross(vec3 a, vec3 b) {
 	return make_vec3(a.y * b.z - a.z * b.y,
 				a.z * b.x - a.x * b.z,

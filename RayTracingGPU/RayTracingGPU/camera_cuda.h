@@ -19,6 +19,7 @@ struct __align__(16) camera
     float lens_radius;
 };
 
+__host__ __device__
 void init_camera(camera &cam, vec3 lookfrom, vec3 lookat, vec3 vup, float vfov, float aspect, float aperture, float focus_dist)
 {
     // vfov is top to bottom in degrees
