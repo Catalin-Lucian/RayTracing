@@ -34,23 +34,24 @@ __constant__ world d_world;
 
 // ===============================================================================
 
-__device__ vec3 get_color(const ray& r, world& world, curandState* local_rand_state) {
+__device__ vec3 get_color(const ray& r,const world& world, curandState* local_rand_state) {
     ray cur_ray = r;
     vec3 cur_attenuation = make_vec3(1.0f, 1.0f, 1.0f);
    
     // 50 iterations for ray bounce
-    for (int i = 0; i < 50; i++) {
+    for (int i = 0; i < 1; i++) {
         record rec;
 
         if (hit(world, cur_ray, 0.001f, FLT_MAX, rec)) {
             ray scattered;
             vec3 attenuation;
+
             if (scatter(rec.material, cur_ray, rec, attenuation, scattered, local_rand_state)) {
                 cur_attenuation *= attenuation;
                 cur_ray = scattered;
             }
             else {
-                return make_vec3(0.0f, 0.0f, 0.0f);
+                return make_vec3(0.0f, 0.0f, 1.0f);
             }
         }
         else {
@@ -91,44 +92,41 @@ __global__ void render(
         curandState local_rand_state = rand_state[pixel_index];
 
         color col = make_vec3(0.f, 0.f, 0.f);
-        for (int s = 0; s < ns; s++) {
+        for (int s = 0; s < 1; s++) {
             float u = (i + curand_uniform(&local_rand_state)) / float(max_x);
             float v = (j + curand_uniform(&local_rand_state)) / float(max_y);
             ray r = get_ray(d_camera, u, v, &local_rand_state);
             col += get_color(r, d_world, &local_rand_state);
         }
 
-        col /= float(ns);
+        //col /= float(ns);
         image[pixel_index] = col;
     }
 }
 
 void create_world(int nx, int ny, camera& h_camera, world& h_world) {
 
-    set_sphere(h_world.objects[0], make_vec3(0.f, -1000.0f, -1.f), 1000.f, make_lambertian(make_vec3(0.5f, 0.5f, 0.5f)));
+    h_world.objects[0] = make_sphere(make_vec3(0.f, -1000.0f, -1.f), 1000.f, make_lambertian(make_vec3(0.5f, 0.5f, 0.5f)));
     int idx = 1;
     for (int a = -11; a < 11; a++) {
         for (int b = -11; b < 11; b++) {
             float choose_mat = random_float();
             vec3 center = make_vec3(a + random_float(), 0.2f, b + random_float());
-            //if (length(center - make_vec3(4.f, 0.f, 2.f)) > 0.9) {
-                vec3 material_color;
-                material mat;
-                if (choose_mat < 0.8f) {
-                    material_color = make_color(random_float(), random_float(), random_float()) 
-                        * make_color(random_float(), random_float(), random_float());
-                    mat = make_lambertian(material_color);
-                }
-                else if (choose_mat < 0.95f) {
-                    material_color = make_vec3(random_float(0.5f, 1.f), random_float(0.5f, 1.f), random_float(0.5f, 1.f));
-                    mat = make_metal(material_color, 0.5f * random_float(0.f, 0.5f));
-                }
-                else {
-                    material_color = make_vec3(1.0f, 1.0f, 1.0f);
-                    mat = make_dielectric(1.5f);
-                }
-                set_sphere(h_world.objects[idx++], center, 0.2f, mat);
-            //}
+            color material_color;
+            material mat;
+            if (choose_mat < 0.8f) {
+                material_color = make_color(random_float() * random_float(), random_float() * random_float(), random_float() * random_float());
+                mat = make_lambertian(material_color);
+            }
+            else if (choose_mat < 0.95f) {
+                material_color = make_color(random_float(0.5f, 1.f), random_float(0.5f, 1.f), random_float(0.5f, 1.f));
+                mat = make_metal(material_color, random_float(0.f, 0.5f));
+            }
+            else {
+                material_color = make_color(1.0f, 1.0f, 1.0f);
+                mat = make_dielectric(1.5f);
+            }
+            h_world.objects[idx++]= make_sphere(center, 0.2f, mat);
         }
     }
 
@@ -137,12 +135,13 @@ void create_world(int nx, int ny, camera& h_camera, world& h_world) {
     set_sphere(h_world.objects[idx++], make_vec3(4.f, 1.f, 0.f), 1.0f, make_metal(make_vec3(0.7f, 0.6f, 0.5f), 0.0f));
     h_world.size = idx;
 
+
     vec3 lookfrom = make_vec3(13.f, 2.f, 3.f);
     vec3 lookat = make_vec3(0.f, 0.f, 0.f);
     float dist_to_focus = length(lookfrom - lookat);
     float aperture = 0.1f;
     init_camera(
-        d_camera,
+        h_camera,
         lookfrom,
         lookat,
         make_vec3(0.f, 1.f, 0.f),
@@ -200,7 +199,7 @@ int main() {
 
     // Create streams
     int num_streams_height = 1; // Number of streams along height
-    int num_streams_width = 1;  // Number of streams along width
+    int num_streams_width = 3;  // Number of streams along width
     int total_streams = num_streams_height * num_streams_width;
     cudaStream_t* streams = new cudaStream_t[total_streams];
 
@@ -234,7 +233,6 @@ int main() {
                 d_image_pixels, nx, ny, ns, startRow, endRow, startCol, endCol, d_rand_state_pixels);
         }
     }
-
 
     // Așteptarea finalizării tuturor streams
     for (int i = 0; i < total_streams; ++i) {

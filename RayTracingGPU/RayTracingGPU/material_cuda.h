@@ -161,7 +161,7 @@ bool scatter_dielectric(
     return true;
 }
 
-__device__ inline
+__device__
 bool scatter(
     const material& mat,
     const ray& r_in,
@@ -171,12 +171,12 @@ bool scatter(
     curandState* local_rand_state
 ) {
     switch (mat.type) {
-    case material::LAMBERTIAN:
-        return scatter_lambertian(mat, r_in, rec, attenuation, scattered, local_rand_state);
-    case material::METAL:
-        return scatter_metal(mat, r_in, rec, attenuation, scattered, local_rand_state);
-    case material::DIELECTRIC:
-        return scatter_dielectric(mat, r_in, rec, attenuation, scattered, local_rand_state);
+        case material::LAMBERTIAN:
+            return scatter_lambertian(mat, r_in, rec, attenuation, scattered, local_rand_state);
+        case material::METAL:
+            return scatter_metal(mat, r_in, rec, attenuation, scattered, local_rand_state);
+        case material::DIELECTRIC:
+            return scatter_dielectric(mat, r_in, rec, attenuation, scattered, local_rand_state);
     }
     return false;
 }
