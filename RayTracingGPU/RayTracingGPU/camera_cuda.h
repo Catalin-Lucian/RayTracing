@@ -19,18 +19,6 @@ struct __align__(16) camera
     float lens_radius;
 };
 
-//__device__ void copy_camera(camera* to, camera* from)
-//{
-//    to->origin = from->origin;
-//    to->lower_left_corner = from->lower_left_corner;
-//    to->horizontal = from->horizontal;
-//    to->vertical = from->vertical;
-//    to->u = from->u;
-//    to->v = from->v;
-//    to->w = from->w;
-//    to->lens_radius = from->lens_radius;
-//}
-
 void init_camera(camera &cam, vec3 lookfrom, vec3 lookat, vec3 vup, float vfov, float aspect, float aperture, float focus_dist)
 {
     // vfov is top to bottom in degrees

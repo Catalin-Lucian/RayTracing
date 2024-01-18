@@ -9,7 +9,7 @@ struct sphere
     material material;
 };
 
-__device__ __host__ inline
+__device__ __host__
 sphere make_sphere(vec3 center, float radius,material mat){
 	sphere s;
 	s.center = center;
@@ -18,7 +18,7 @@ sphere make_sphere(vec3 center, float radius,material mat){
 	return s;
 }
 
-__device__ __host__ inline
+__device__ __host__ 
 void set_sphere(sphere& s, vec3 center, float radius, material mat){
 	s.center = center;
 	s.radius = radius;

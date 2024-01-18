@@ -26,7 +26,7 @@ struct record {
     material material; // This line requires the complete type of material
 };
 
-__device__ __host__ inline
+__device__ __host__ 
 material make_lambertian(vec3 albedo) {
 	material m;
 	m.type = material::LAMBERTIAN;
@@ -34,7 +34,7 @@ material make_lambertian(vec3 albedo) {
 	return m;
 }
 
-__device__ __host__ inline
+__device__ __host__ 
 material make_metal(vec3 albedo, float fuzz) {
 	material m;
 	m.type = material::METAL;
@@ -46,7 +46,7 @@ material make_metal(vec3 albedo, float fuzz) {
 	return m;
 }
 
-__device__ __host__ inline
+__device__ __host__ 
 material make_dielectric(float ref_idx) {
 	material m;
 	m.type = material::DIELECTRIC;
@@ -55,6 +55,7 @@ material make_dielectric(float ref_idx) {
 }
 
 #define RANDVEC3 make_vec3(curand_uniform(local_rand_state),curand_uniform(local_rand_state),curand_uniform(local_rand_state))
+
 __device__ 
 vec3 random_in_unit_sphere(curandState* local_rand_state) {
     vec3 p;

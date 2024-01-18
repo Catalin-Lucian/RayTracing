@@ -7,7 +7,7 @@ struct __align__(16) ray {
     vec3 direction;
 };
 
-__device__ inline 
+__device__  
 ray make_ray(vec3 origin, vec3 direction) {
 	ray d;
 	d.origin = origin;
@@ -15,7 +15,7 @@ ray make_ray(vec3 origin, vec3 direction) {
 	return d;
 }
 
-__device__ inline
+__device__ 
 vec3 operator+(const ray& r, float t) {
 	return r.origin + t * r.direction;
 }

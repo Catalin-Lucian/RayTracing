@@ -39,7 +39,7 @@ __device__ vec3 get_color(const ray& r,const world& world, curandState* local_ra
     vec3 cur_attenuation = make_vec3(1.0f, 1.0f, 1.0f);
    
     // 50 iterations for ray bounce
-    for (int i = 0; i < 1; i++) {
+    for (int i = 0; i < 50; i++) {
         record rec;
 
         if (hit(world, cur_ray, 0.001f, FLT_MAX, rec)) {
@@ -92,14 +92,14 @@ __global__ void render(
         curandState local_rand_state = rand_state[pixel_index];
 
         color col = make_vec3(0.f, 0.f, 0.f);
-        for (int s = 0; s < 1; s++) {
+        for (int s = 0; s < ns; s++) {
             float u = (i + curand_uniform(&local_rand_state)) / float(max_x);
             float v = (j + curand_uniform(&local_rand_state)) / float(max_y);
             ray r = get_ray(d_camera, u, v, &local_rand_state);
             col += get_color(r, d_world, &local_rand_state);
         }
 
-        //col /= float(ns);
+        col /= float(ns);
         image[pixel_index] = col;
     }
 }
@@ -111,7 +111,7 @@ void create_world(int nx, int ny, camera& h_camera, world& h_world) {
     for (int a = -11; a < 11; a++) {
         for (int b = -11; b < 11; b++) {
             float choose_mat = random_float();
-            vec3 center = make_vec3(a + random_float(), 0.2f, b + random_float());
+            vec3 center = make_vec3(a + 0.9* random_float(), 0.2f, b + 0.9 * random_float());
             color material_color;
             material mat;
             if (choose_mat < 0.8f) {
@@ -155,7 +155,7 @@ void create_world(int nx, int ny, camera& h_camera, world& h_world) {
 int main() {
     int nx = 1920; // width
     int ny = 1080; // heigth
-    int ns = 500; // numar de sample uri
+    int ns = 100; // numar de sample uri
     int tile_size_x = 16; 
     int tile_size_y = 16;
 

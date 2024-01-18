@@ -4,7 +4,7 @@
 #include "material_cuda.h"
 
 
-__device__ inline
+__device__ 
 record make_record(float t, vec3 p, vec3 normal, material mat) {
 	record rec;
 	rec.t = t;
@@ -13,6 +13,4 @@ record make_record(float t, vec3 p, vec3 normal, material mat) {
 	rec.material = mat;
 	return rec;
 }
-
-
 #endif
